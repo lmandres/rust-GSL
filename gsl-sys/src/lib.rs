@@ -146,7 +146,7 @@ fn call_fvv(x: *const gsl_vector, v: *const gsl_vector, params: *mut multifit_nl
 
 pub unsafe fn gsl_multifit_nlinear_basic(
     func_f: fn(Vec<f64>, f64, Vec<f64>) -> f64,
-    params_in: &Vec<f64>,
+    params_in: Vec<f64>,
     ts: &Vec<f64>,
     ys: &Vec<f64>,
     args: &Vec<f64>,
@@ -167,7 +167,7 @@ pub unsafe fn gsl_multifit_nlinear_basic(
 pub unsafe fn gsl_multifit_nlinear_basic_df(
     func_f: fn(Vec<f64>, f64, Vec<f64>) -> f64,
     func_dfs: &Vec<fn(Vec<f64>, f64, Vec<f64>) -> f64>,
-    params_in: &Vec<f64>,
+    params_in: Vec<f64>,
     ts: &Vec<f64>,
     ys: &Vec<f64>,
     args: &Vec<f64>,
@@ -194,7 +194,7 @@ pub unsafe fn gsl_multifit_nlinear_basic_df(
             params.len(),
             ts,
             ys,
-            &args,
+            args,
             max_iters,
             &mut status
         );
@@ -323,14 +323,13 @@ fn run_gsl_multifit_nlinear_df(
     unsafe { gsl_multifit_nlinear_covar(jacobian, 0.0, covar); }
 
     /* compute final cost */
-    let residuals = unsafe { gsl_multifit_nlinear_residual(w) };
-    unsafe { gsl_blas_ddot(residuals, residuals, &mut chisq); }
+    unsafe { gsl_blas_ddot(f, f, &mut chisq); }
     let chisq_dof = (chisq / dof).sqrt();
 
+    let residuals = unsafe { gsl_multifit_nlinear_residual(w) };
     for i in 0..params_len {
         unsafe { params.wrapping_add(i).write(gsl_vector_get(residuals, i)); }
         unsafe { parerr.wrapping_add(i).write(chisq_dof * gsl_matrix_get(covar, i, i).sqrt()); }
-        println!("{}", i);
     }
 
     unsafe { gsl_multifit_nlinear_free(w); }
