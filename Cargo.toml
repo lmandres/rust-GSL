@@ -31,4 +31,3 @@ rustdoc-args = ["--generate-link-to-definition"]
 [lib]
 name = "rgsl"
 crate-type = ["dylib", "rlib"]
-features = ["v2_1"]
