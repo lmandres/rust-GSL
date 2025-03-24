@@ -11,7 +11,7 @@ license = "GPL-3.0+"
 edition = "2021"
 
 [dependencies]
-sys = { path = "gsl-sys", package = "GSL-sys", version = "3.0.0" }
+sys = { path = "gsl-sys", package = "GSL-sys", version = "3.0.0", features = ["v2_1"] }
 paste = "1.0"
 
 [features]
@@ -31,3 +31,4 @@ rustdoc-args = ["--generate-link-to-definition"]
 [lib]
 name = "rgsl"
 crate-type = ["dylib", "rlib"]
+features = ["v2_1"]
