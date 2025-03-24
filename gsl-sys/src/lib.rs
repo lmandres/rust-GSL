@@ -323,12 +323,13 @@ fn run_gsl_multifit_nlinear_df(
     unsafe { gsl_multifit_nlinear_covar(jacobian, 0.0, covar); }
 
     /* compute final cost */
-    unsafe { gsl_blas_ddot(f, f, &mut chisq); }
+    let residuals = unsafe { gsl_multifit_nlinear_residual(w) };
+    unsafe { gsl_blas_ddot(residuals, residuals, &mut chisq); }
     let chisq_dof = (chisq / dof).sqrt();
 
-    let residuals = unsafe { gsl_multifit_nlinear_residual(w) };
+    let x_gsl_vec: *const gsl_vector = unsafe { gsl_multifit_nlinear_position(w) };
     for i in 0..params_len {
-        unsafe { params.wrapping_add(i).write(gsl_vector_get(residuals, i)); }
+        unsafe { params.wrapping_add(i).write(gsl_vector_get(x_gsl_vec, i)); }
         unsafe { parerr.wrapping_add(i).write(chisq_dof * gsl_matrix_get(covar, i, i).sqrt()); }
     }
 
