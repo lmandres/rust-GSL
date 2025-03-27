@@ -92,7 +92,7 @@ extern "C" {
 extern "C" {
     pub fn gsl_multifit_nlinear_winit(
         x: *const gsl_vector,
-        w: *const gsl_vector,
+        wts: *const gsl_vector,
         fdf: *mut self::gsl_multifit_nlinear_fdf,
         w: *mut gsl_multifit_nlinear_workspace,
     ) -> ::std::os::raw::c_int;
@@ -488,7 +488,7 @@ extern "C" {
 extern "C" {
     pub fn gsl_multilarge_nlinear_winit(
         x: *const gsl_vector,
-        w: *const gsl_vector,
+        wts: *const gsl_vector,
         fdf: *mut self::gsl_multilarge_nlinear_fdf,
         w: *mut gsl_multilarge_nlinear_workspace,
     ) -> ::std::os::raw::c_int;
