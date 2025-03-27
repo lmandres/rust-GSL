@@ -24,8 +24,12 @@ pub use self::view::View;
 
 pub use sys::gsl_multifit_nlinear_basic;
 pub use sys::gsl_multifit_nlinear_basic_df;
+pub use sys::gsl_multifit_nlinear_weighted;
+pub use sys::gsl_multifit_nlinear_weighted_df;
 pub use sys::gsl_multilarge_nlinear_basic;
 pub use sys::gsl_multilarge_nlinear_basic_df;
+pub use sys::gsl_multilarge_nlinear_weighted;
+pub use sys::gsl_multilarge_nlinear_weighted_df;
 
 // enums part
 pub use self::enums::*;

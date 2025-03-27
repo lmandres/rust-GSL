@@ -89,6 +89,15 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 
+extern "C" {
+    pub fn gsl_multifit_nlinear_winit(
+        x: *const gsl_vector,
+        w: *const gsl_vector,
+        fdf: *mut self::gsl_multifit_nlinear_fdf,
+        w: *mut gsl_multifit_nlinear_workspace,
+    ) -> ::std::os::raw::c_int;
+}
+
 fn call_multifit_f(x: *const gsl_vector, data: *mut multifit_nlinear_data, f: *mut gsl_vector) -> i32 {
 
     let n = unsafe { (*data).ts.len() };
@@ -191,6 +200,7 @@ pub unsafe fn gsl_multifit_nlinear_basic_df(
             params.as_mut_ptr(),
             parerr.as_mut_ptr(),
             params.len(),
+            &vec![],
             ts,
             ys,
             args,
@@ -203,12 +213,78 @@ pub unsafe fn gsl_multifit_nlinear_basic_df(
     result_handler!(err_code, (params, parerr, status))
 }
 
+pub unsafe fn gsl_multifit_nlinear_weighted(
+    func_f: fn(Vec<f64>, f64, Vec<f64>) -> f64,
+    params_in: Vec<f64>,
+    weights_in: &Vec<f64>,
+    ts: &Vec<f64>,
+    ys: &Vec<f64>,
+    args: &Vec<f64>,
+    max_iters: u64
+) -> Result<(Vec<f64>, Vec<f64>, i32), i32> {
+
+    gsl_multifit_nlinear_weighted_df(
+        func_f,
+        &Vec::new(),
+        params_in,
+        weights_in,
+        ts,
+        ys,
+        args,
+        max_iters
+    )
+}
+
+pub unsafe fn gsl_multifit_nlinear_weighted_df(
+    func_f: fn(Vec<f64>, f64, Vec<f64>) -> f64,
+    func_dfs: &Vec<fn(Vec<f64>, f64, Vec<f64>) -> f64>,
+    params_in: Vec<f64>,
+    weights_in: &Vec<f64>,
+    ts: &Vec<f64>,
+    ys: &Vec<f64>,
+    args: &Vec<f64>,
+    max_iters: u64
+) -> Result<(Vec<f64>, Vec<f64>, i32), i32> {
+
+    let mut params: Vec<f64> = params_in.clone();
+    let mut parerr: Vec<f64> = Vec::with_capacity(params_in.len());
+    let mut status: i32 = 0;
+    let mut err_code: i32 = GSL_FAILURE;
+
+    parerr.resize(params_in.len(), 0.0);
+
+    if ts.len() != ys.len() {
+        eprintln!("Time length does not match Ys length!");
+    } else if ts.len() != weights_in.len() {
+        eprintln!("Time length does not match weights length!");
+    } else if params_in.len() > ts.len() {
+        eprintln!("Time length is shorter than parameter length!");
+    } else {
+        run_gsl_multifit_nlinear_df(
+            func_f,
+            func_dfs,
+            params.as_mut_ptr(),
+            parerr.as_mut_ptr(),
+            params.len(),
+            weights_in,
+            ts,
+            ys,
+            args,
+            max_iters,
+            &mut status
+        );
+        err_code = GSL_SUCCESS;
+    }
+
+    result_handler!(err_code, (params, parerr, status))
+}
 fn run_gsl_multifit_nlinear_df(
     func_f: fn(Vec<f64>, f64, Vec<f64>) -> f64,
     func_dfs: &Vec<fn(Vec<f64>, f64, Vec<f64>) -> f64>,
     params: *mut f64,
     parerr: *mut f64,
     params_len: usize,
+    weights_in: &Vec<f64>,
     ts: &Vec<f64>,
     ys: &Vec<f64>,
     args: &Vec<f64>,
@@ -276,12 +352,25 @@ fn run_gsl_multifit_nlinear_df(
     };
 
     /* initialize solver with starting point */
-    unsafe {
-        self::gsl_multifit_nlinear_init (
-            x_ptr,
-            fdf_ptr,
-            w
-        );
+    if weights_in.len() == ts.len() {
+        let weights = unsafe { gsl_vector_view_array(weights_in.clone().as_mut_ptr(), weights_in.len()) };
+        let weights_ptr: *const gsl_vector = &weights.vector as *const gsl_vector;
+        unsafe {
+            self::gsl_multifit_nlinear_winit (
+                x_ptr,
+                weights_ptr,
+                fdf_ptr,
+                w
+            );
+        }
+    } else {
+        unsafe {
+            self::gsl_multifit_nlinear_init (
+                x_ptr,
+                fdf_ptr,
+                w
+            );
+        }
     }
     /* compute initial cost function */
     let f = unsafe { gsl_multifit_nlinear_residual(w) };
@@ -396,6 +485,15 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 
+extern "C" {
+    pub fn gsl_multilarge_nlinear_winit(
+        x: *const gsl_vector,
+        w: *const gsl_vector,
+        fdf: *mut self::gsl_multilarge_nlinear_fdf,
+        w: *mut gsl_multilarge_nlinear_workspace,
+    ) -> ::std::os::raw::c_int;
+}
+
 fn call_multilarge_f(x: *const gsl_vector, data: *mut multilarge_nlinear_data, f: *mut gsl_vector) -> i32 {
 
     let n = unsafe { (*data).ts.len() };
@@ -498,6 +596,73 @@ pub unsafe fn gsl_multilarge_nlinear_basic_df(
             params.as_mut_ptr(),
             parerr.as_mut_ptr(),
             params.len(),
+            &vec![],
+            ts,
+            ys,
+            args,
+            max_iters,
+            &mut status
+        );
+        err_code = GSL_SUCCESS;
+    }
+
+    result_handler!(err_code, (params, parerr, status))
+}
+
+pub unsafe fn gsl_multilarge_nlinear_weighted(
+    func_f: fn(Vec<f64>, f64, Vec<f64>) -> f64,
+    params_in: Vec<f64>,
+    weights_in: &Vec<f64>,
+    ts: &Vec<f64>,
+    ys: &Vec<f64>,
+    args: &Vec<f64>,
+    max_iters: u64
+) -> Result<(Vec<f64>, Vec<f64>, i32), i32> {
+
+    gsl_multilarge_nlinear_weighted_df(
+        func_f,
+        &Vec::new(),
+        params_in,
+        weights_in,
+        ts,
+        ys,
+        args,
+        max_iters
+    )
+}
+
+pub unsafe fn gsl_multilarge_nlinear_weighted_df(
+    func_f: fn(Vec<f64>, f64, Vec<f64>) -> f64,
+    func_dfs: &Vec<fn(Vec<f64>, f64, Vec<f64>) -> f64>,
+    params_in: Vec<f64>,
+    weights_in: &Vec<f64>,
+    ts: &Vec<f64>,
+    ys: &Vec<f64>,
+    args: &Vec<f64>,
+    max_iters: u64
+) -> Result<(Vec<f64>, Vec<f64>, i32), i32> {
+
+    let mut params: Vec<f64> = params_in.clone();
+    let mut parerr: Vec<f64> = Vec::with_capacity(params_in.len());
+    let mut status: i32 = 0;
+    let mut err_code: i32 = GSL_FAILURE;
+
+    parerr.resize(params_in.len(), 0.0);
+
+    if ts.len() != ys.len() {
+        eprintln!("Time length does not match Ys length!");
+    } else if weights_in.len() != ts.len() {
+        eprintln!("Time length does not match weights length!");
+    } else if params_in.len() > ts.len() {
+        eprintln!("Time length is shorter than parameter length!");
+    } else {
+        run_gsl_multilarge_nlinear_df(
+            func_f,
+            func_dfs,
+            params.as_mut_ptr(),
+            parerr.as_mut_ptr(),
+            params.len(),
+            weights_in,
             ts,
             ys,
             args,
@@ -516,6 +681,7 @@ fn run_gsl_multilarge_nlinear_df(
     params: *mut f64,
     parerr: *mut f64,
     params_len: usize,
+    weights_in: &Vec<f64>,
     ts: &Vec<f64>,
     ys: &Vec<f64>,
     args: &Vec<f64>,
@@ -584,12 +750,25 @@ fn run_gsl_multilarge_nlinear_df(
     };
 
     /* initialize solver with starting point */
-    unsafe {
-        self::gsl_multilarge_nlinear_init (
-            x_ptr,
-            fdf_ptr,
-            w
-        );
+    if weights_in.len() == ts.len() {
+        let weights = unsafe { gsl_vector_view_array(weights_in.clone().as_mut_ptr(), weights_in.len()) };
+        let weights_ptr: *const gsl_vector = &weights.vector as *const gsl_vector;
+        unsafe {
+            self::gsl_multilarge_nlinear_winit (
+                x_ptr,
+                weights_ptr,
+                fdf_ptr,
+                w
+            );
+        }
+    } else {
+        unsafe {
+            self::gsl_multilarge_nlinear_init (
+                x_ptr,
+                fdf_ptr,
+                w
+            );
+        }
     }
     /* compute initial cost function */
     let f = unsafe { gsl_multilarge_nlinear_residual(w) };
